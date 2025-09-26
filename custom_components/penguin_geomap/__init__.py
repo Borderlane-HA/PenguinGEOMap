@@ -50,7 +50,6 @@ class DeviceWatcher:
             )
             return
 
-        # Subscribe to state changes
         self._unsub = async_track_state_change_event(
             self.hass,
             [self.entity_id],
@@ -63,7 +62,6 @@ class DeviceWatcher:
             self.verify_ssl,
         )
 
-        # Send initial position once if available
         await self._send_current_if_available()
 
     async def async_stop(self) -> None:
@@ -150,11 +148,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         watchers.append(watcher)
         await watcher.async_start()
 
-
-# Reload integration when options/data change
-async def _update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
-    await hass.config_entries.async_reload(entry.entry_id)
-entry.async_on_unload(entry.add_update_listener(_update_listener))
+    # Auto-reload when options/data change
+    async def _update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
+        await hass.config_entries.async_reload(entry.entry_id)
+    entry.async_on_unload(entry.add_update_listener(_update_listener))
 
     # Services
     async def async_handle_send_now(call):

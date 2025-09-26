@@ -68,7 +68,6 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         self._edit_index: Optional[int] = None
 
     async def async_step_init(self, user_input: dict | None = None) -> FlowResult:
-        # Main menu with exact handlers present below
         return self.async_show_menu(
             step_id="init",
             menu_options={
@@ -98,7 +97,6 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             except Exception:
                 self._edit_index = None
             return await self.async_step_edit_form()
-        # Build choices
         options = {str(i): f"{dev.get(CONF_NAME)} ({dev.get(CONF_ENTITY_ID)})" for i, dev in enumerate(self.devices)}
         schema = vol.Schema({vol.Required("index"): vol.In(list(options.keys()))})
         return self.async_show_form(step_id="edit", data_schema=schema)

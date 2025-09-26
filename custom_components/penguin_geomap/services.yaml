@@ -12,7 +12,6 @@ send_now:
         entity:
           domain: device_tracker
 
-
 test_post:
   name: Send test point (diagnostic)
   description: Sends a test coordinate to the server using the configured device (default index 0) to verify connectivity.

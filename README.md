@@ -50,9 +50,10 @@ Supports multiple devices (each with its own **key**, **server URL**, and **devi
 
 > Alternatively, copy manually to `/config/custom_components/penguin_geomap`.
 
-1. Add this repository to HACS as a **custom repository**.  
-2. Install **PenguinGEOMap**.  
-3. **Restart** Home Assistant.
+1. Add this repository to HACS as a **custom repository**.
+2. URL: https://github.com/Borderlane-HA/PenguinGEOMap
+3. Install **PenguinGEOMap**.  
+4. **Restart** Home Assistant.
 
 After restart: **Settings → Devices & Services → Add Integration → “PenguinGEOMap”**.
 

@@ -2,10 +2,10 @@
   "domain": "penguin_geomap",
   "name": "PenguinGEOMap",
   "version": "0.1.0",
-  "documentation": "https://github.com/yourname/PenguinGEOMap",
-  "issue_tracker": "https://github.com/yourname/PenguinGEOMap/issues",
+  "documentation": "https://github.com/Borderlane-HA/PenguinGEOMap",
+  "issue_tracker": "https://github.com/Borderlane-HA/PenguinGEOMap/issues",
   "codeowners": [
-    "@yourname"
+    "@Borderlane-HA"
   ],
   "requirements": [],
   "integration_type": "hub",

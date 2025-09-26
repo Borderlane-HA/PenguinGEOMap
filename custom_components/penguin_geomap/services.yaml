@@ -1,0 +1,13 @@
+
+send_now:
+  name: Send current position now
+  description: Reads the current latitude/longitude from the selected device_tracker and posts to the configured server immediately.
+  fields:
+    entity_id:
+      name: Entity ID
+      description: (Optional) device_tracker entity to send. If omitted, the first configured device is used.
+      example: device_tracker.bananastefan
+      required: false
+      selector:
+        entity:
+          domain: device_tracker

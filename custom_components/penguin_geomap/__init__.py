@@ -35,7 +35,7 @@ class DeviceWatcher:
             _LOGGER.warning("PenguinGEOMap: Device %s not fully configured (entity_id/key/server_url) – skipping.", self.name)
             return
         self._unsub = async_track_state_change_event(self.hass, [self.entity_id], self._state_changed)
-        _LOGGER.info("PenguinGEOMap: Started watcher for %s (%s)", self.name, self.entity_id)
+        _LOGGER.info("PenguinGEOMap: Started watcher for %s (%s) with verify_ssl=%s", self.name, self.entity_id, self.verify_ssl)
         # Send initial position once if available
         await self._send_current_if_available()
 

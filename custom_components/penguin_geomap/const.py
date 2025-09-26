@@ -1,4 +1,3 @@
-
 DOMAIN = "penguin_geomap"
 
 CONF_DEVICES = "devices"
@@ -8,4 +7,4 @@ CONF_KEY = "key"
 CONF_SERVER_URL = "server_url"
 CONF_ENABLED = "enabled"
 
-PLATFORMS = []  # No entities are exposed by this integration
+PLATFORMS = []

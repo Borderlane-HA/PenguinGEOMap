@@ -1,14 +1,11 @@
-
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, List, Callable
+from typing import Any, Dict, List
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.event import async_track_state_change_event
-from homeassistant.helpers.typing import HomeAssistantType
-from homeassistant.const import CONF_ENTITY_ID
 
 from .const import (
     DOMAIN,
@@ -65,20 +62,16 @@ class DeviceWatcher:
         attrs = new_state.attributes or {}
         lat = attrs.get("latitude")
         lon = attrs.get("longitude")
-        # Some trackers store gps attrs differently; fallbacks just in case
-        if lat is None and "gps_accuracy" in attrs and "source_type" in attrs:
-            lat = attrs.get("latitude")
-            lon = attrs.get("longitude")
 
         if lat is None or lon is None:
             _LOGGER.debug("State change for %s had no lat/lon; skipping", self.entity_id)
             return
 
         ts = int(time.time())
-        # Debounce: don't send more often than every 5 seconds with identical coords
-        if self._last_sent == (lat, lon, ):
+        # Debounce identical lat/lon
+        if self._last_sent == (lat, lon):
             return
-        self._last_sent = (lat, lon, )
+        self._last_sent = (lat, lon)
 
         self.hass.async_create_task(self._async_post(lat, lon, ts))
 
@@ -116,7 +109,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
         await watcher.async_start()
 
     hass.data[DOMAIN][entry.entry_id] = {"watchers": watchers}
-
     return True
 
 
@@ -128,11 +120,10 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
 
 
 async def async_update_entry(hass: HomeAssistant, entry: ConfigEntry):
-    # Restart watchers on options update
     await async_unload_entry(hass, entry)
     await async_setup_entry(hass, entry)
-# __init__.py (Ergänzung)
 
+# IMPORTANT: Wire the Options Flow so HA shows the device editor.
 from .config_flow import PenguinGeoMapOptionsFlow
 
 async def async_get_options_flow(config_entry):

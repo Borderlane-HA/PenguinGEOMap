@@ -1,8 +1,8 @@
+
 from __future__ import annotations
 
 import logging
 from typing import Any, Dict, List
-
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.event import async_track_state_change_event
@@ -62,17 +62,14 @@ class DeviceWatcher:
         attrs = new_state.attributes or {}
         lat = attrs.get("latitude")
         lon = attrs.get("longitude")
-
         if lat is None or lon is None:
             _LOGGER.debug("State change for %s had no lat/lon; skipping", self.entity_id)
             return
 
         ts = int(time.time())
-        # Debounce identical lat/lon
         if self._last_sent == (lat, lon):
             return
         self._last_sent = (lat, lon)
-
         self.hass.async_create_task(self._async_post(lat, lon, ts))
 
     async def _async_post(self, lat: float, lon: float, ts: int):
@@ -107,10 +104,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
         watcher = DeviceWatcher(hass, dev)
         watchers.append(watcher)
         await watcher.async_start()
-
     hass.data[DOMAIN][entry.entry_id] = {"watchers": watchers}
     return True
-
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
     data = hass.data.get(DOMAIN, {}).pop(entry.entry_id, {})
@@ -118,13 +113,11 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
         await watcher.async_stop()
     return True
 
-
 async def async_update_entry(hass: HomeAssistant, entry: ConfigEntry):
     await async_unload_entry(hass, entry)
     await async_setup_entry(hass, entry)
 
-# IMPORTANT: Wire the Options Flow so HA shows the device editor.
-from .config_flow import PenguinGeoMapOptionsFlow
-
+# Wire the Options Flow (standard class names ensure discovery)
+from .config_flow import OptionsFlowHandler
 async def async_get_options_flow(config_entry):
-    return PenguinGeoMapOptionsFlow(config_entry)
+    return OptionsFlowHandler(config_entry)

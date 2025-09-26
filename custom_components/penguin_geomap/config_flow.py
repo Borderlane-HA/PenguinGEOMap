@@ -1,3 +1,4 @@
+
 from __future__ import annotations
 
 import voluptuous as vol
@@ -32,12 +33,11 @@ def device_schema(existing: Optional[Dict[str, Any]] = None) -> vol.Schema:
         }
     )
 
-class PenguinGeoMapConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
+class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     VERSION = 1
 
     async def async_step_user(self, user_input: dict | None = None) -> FlowResult:
         if user_input is not None:
-            # Create empty entry; devices managed in options
             return self.async_create_entry(
                 title="PenguinGEOMap",
                 data={},
@@ -48,15 +48,13 @@ class PenguinGeoMapConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_import(self, user_input: dict) -> FlowResult:
         return await self.async_step_user(user_input)
 
-
-class PenguinGeoMapOptionsFlow(config_entries.OptionsFlow):
+class OptionsFlowHandler(config_entries.OptionsFlow):
     def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
         self.config_entry = config_entry
         self.devices: List[Dict[str, Any]] = list(config_entry.options.get(CONF_DEVICES, []))
         self._edit_index: Optional[int] = None
 
     async def async_step_init(self, user_input: dict | None = None) -> FlowResult:
-        # Main menu
         return self.async_show_menu(
             step_id="init",
             menu_options={
@@ -71,7 +69,6 @@ class PenguinGeoMapOptionsFlow(config_entries.OptionsFlow):
         return self.async_create_entry(title="", data={CONF_DEVICES: self.devices})
 
     async def async_step_add(self, user_input: dict | None = None) -> FlowResult:
-        # Route for "add" from menu
         if user_input is not None:
             self.devices.append(user_input)
             return await self.async_step_init()
@@ -82,7 +79,6 @@ class PenguinGeoMapOptionsFlow(config_entries.OptionsFlow):
         )
 
     async def async_step_edit(self, user_input: dict | None = None) -> FlowResult:
-        # Choose device to edit
         if user_input is not None:
             idx = int(user_input["index"])
             self._edit_index = idx

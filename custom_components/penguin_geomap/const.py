@@ -1,3 +1,4 @@
+
 DOMAIN = "penguin_geomap"
 
 CONF_DEVICES = "devices"

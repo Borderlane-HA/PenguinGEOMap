@@ -1,7 +1,7 @@
 {
   "domain": "penguin_geomap",
   "name": "PenguinGEOMap",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "documentation": "https://github.com/Borderlane-HA/PenguinGEOMap",
   "issue_tracker": "https://github.com/Borderlane-HA/PenguinGEOMap/issues",
   "codeowners": [

@@ -1,1 +1,14 @@
-
+{
+  "domain": "penguin_geomap",
+  "name": "PenguinGEOMap",
+  "version": "0.1.0",
+  "documentation": "https://github.com/yourname/PenguinGEOMap",
+  "issue_tracker": "https://github.com/yourname/PenguinGEOMap/issues",
+  "codeowners": [
+    "@yourname"
+  ],
+  "requirements": [],
+  "integration_type": "hub",
+  "config_flow": true,
+  "iot_class": "cloud_push"
+}

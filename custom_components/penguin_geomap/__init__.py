@@ -10,6 +10,7 @@ import aiohttp
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.event import async_track_state_change_event
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .const import (
     DOMAIN,
@@ -115,7 +116,7 @@ class DeviceWatcher:
             "entity_id": self.entity_id,
         }
         try:
-            session: aiohttp.ClientSession = self.hass.helpers.aiohttp_client.async_get_clientsession()
+            session: aiohttp.ClientSession = async_get_clientsession(self.hass)
             async with session.post(url, json=payload, timeout=10, ssl=self.verify_ssl) as resp:
                 if resp.status != 200:
                     _LOGGER.warning(
@@ -148,6 +149,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         watcher = DeviceWatcher(hass, dev)
         watchers.append(watcher)
         await watcher.async_start()
+
+
+# Reload integration when options/data change
+async def _update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    await hass.config_entries.async_reload(entry.entry_id)
+entry.async_on_unload(entry.add_update_listener(_update_listener))
 
     # Services
     async def async_handle_send_now(call):

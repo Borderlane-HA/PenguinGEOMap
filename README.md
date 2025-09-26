@@ -12,8 +12,8 @@ This bundle contains:
 2. Restart Home Assistant.
 3. Go to *Settings → Devices & Services → Add Integration* and search **PenguinGEOMap**.
 4. Create the integration (no initial fields). Then open the integration *Options* and add one or more devices:
-   - **Name**: e.g., "Banana Stefan iPhone"
-   - **Sensor**: select your `device_tracker.XX` entity (e.g., `device_tracker.bananastefan`). This must provide `latitude` and `longitude` attributes.
+   - **Name**: e.g., "My iPhone"
+   - **Sensor**: select your `device_tracker.XX` entity (e.g., `device_tracker.myiphone`). This must provide `latitude` and `longitude` attributes.
    - **Server URL**: e.g., `https://YOUR.DOMAIN/penguin_geomap_server`
    - **Key**: A per-device key (only A–Z a–z 0–9 `_` `-`). This secures your data on the server.
    - **Enabled**: Turn on/off without deleting.

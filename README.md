@@ -1,108 +1,110 @@
 # PenguinGEOMap
 
-**HACS-Integration für Home Assistant** + **selbstgehosteter Server** zur Visualisierung von Bewegungsdaten auf einer OpenStreetMap-Karte.  
-Unterstützt beliebig viele Geräte (je Gerät eigener **Key**, **Server-URL**, **device_tracker**), Login-Schutz auf dem Server und eine „**Verbinden**“-Option für Weglinien.
+**HACS integration for Home Assistant** + **self‑hosted server** to visualize movement data on an OpenStreetMap map.  
+Supports multiple devices (each with its own **key**, **server URL**, and **device_tracker**), server‑side login protection, and a **“connect”** option to draw route lines.
 
-> Beispiele in dieser README:
-> - Gerät: `myiphone`  
+> Examples in this README:
+> - Device name: `myiphone`  
 > - Entity: `device_tracker.myiphone`  
 > - Server: `https://myserverurl/penguin_geomap_server`  
-> - Key / Passwort: `MYPASS-KEY`
+> - Key / password: `MYPASS-KEY`
 
 ---
 
 ## Features
 
-- Mehrere Geräte manuell hinzufügen (Name, Device-Tracker, Key, Server-URL, Verify-SSL, Poll-Intervall).
-- Server-Login per **Key** (nur wer den Key kennt, sieht die Punkte des Geräts).
-- Karte auf **OpenStreetMap**-Basis (Leaflet, via CDN).
-- **„Verbinden“**-Schaltfläche: zeichne eine gestrichelte Linie zwischen den Punkten des gewählten Tages.
-- **Heute** wird standardmäßig angezeigt; über Datepicker andere Tage wählbar oder automatisch der **letzte belegte Tag** (`date=latest`).
-- **Robust**: Event-Listener + optionales **Polling** (Standard 30 s, einstellbar pro Gerät).
+- Add multiple devices manually (name, device tracker, key, server URL, verify SSL, poll interval).
+- Server login via **key** (only people with the key can see the device’s points).
+- **OpenStreetMap** map (Leaflet via CDN).
+- **“Connect”** button: draw a dashed line between points of the selected day.
+- Defaults to **today**; pick other days with the date picker or automatically show the **latest** day (`date=latest`).
+- **Robust**: event listener + optional **polling** (default 30 s, configurable per device).
 
 ---
 
-## Inhaltsverzeichnis
+## Table of contents
 
-1. [Voraussetzungen](#voraussetzungen)  
+1. [Requirements](#requirements)  
 2. [Installation – Home Assistant (HACS)](#installation--home-assistant-hacs)  
 3. [Installation – Server](#installation--server)  
-4. [Erstkonfiguration](#erstkonfiguration)  
+4. [Initial configuration](#initial-configuration)  
 5. [Services (Home Assistant)](#services-home-assistant)  
-6. [Beispiele](#beispiele)  
-7. [Sicherheit & Datenschutz](#sicherheit--datenschutz)  
+6. [Examples](#examples)  
+7. [Security & privacy](#security--privacy)  
 8. [Troubleshooting](#troubleshooting)  
 9. [FAQ](#faq)
 
 ---
 
-## Voraussetzungen
+## Requirements
 
-- **Home Assistant** (Core oder OS/Supervised), HACS empfohlen.
-- Ein **`device_tracker.*`**, der die Attribute `latitude` und `longitude` liefert (z. B. `device_tracker.myiphone`).
-- Ein Webserver mit **PHP** (inkl. **PDO SQLite**) für den Server-Teil. Schreibrechte für den Ordner `server/penguin_geomap_server/data/`.
+- **Home Assistant** (Core or OS/Supervised). HACS recommended.
+- A **`device_tracker.*`** entity that exposes `latitude` and `longitude` attributes  
+  (e.g. `device_tracker.myiphone`).
+- A web server with **PHP** (incl. **PDO SQLite**) for the server part. The folder  
+  `server/penguin_geomap_server/data/` must be writable.
 
 ---
 
 ## Installation – Home Assistant (HACS)
 
-> Alternativ: Manuell nach `/config/custom_components/penguin_geomap` kopieren.
+> Alternatively, copy manually to `/config/custom_components/penguin_geomap`.
 
-1. Dieses Repository in HACS als **benutzerdefiniertes Repository** hinzufügen.  
-2. **PenguinGEOMap** installieren.  
-3. Home Assistant **neu starten**.
+1. Add this repository to HACS as a **custom repository**.  
+2. Install **PenguinGEOMap**.  
+3. **Restart** Home Assistant.
 
-Nach dem Neustart: **Einstellungen → Geräte & Dienste → Integration hinzufügen → „PenguinGEOMap“**.
+After restart: **Settings → Devices & Services → Add Integration → “PenguinGEOMap”**.
 
 ---
 
 ## Installation – Server
 
-1. Den Ordner `server/penguin_geomap_server` auf deinen Webserver kopieren, z. B. nach  
+1. Copy `server/penguin_geomap_server` to your web server, e.g.  
    `/var/www/html/penguin_geomap_server`.
-2. Der Ordner `data/` **muss schreibbar** sein (z. B. `chown -R www-data:www-data data/` und `chmod -R 775 data/`).
-3. (Optional) `logs/` für Server-Logs (z. B. `ingest.log`) ebenfalls schreibbar machen.
-4. **Leaflet** wird per CDN geladen (keine weiteren externen Abhängigkeiten).
-5. **Aufruf**:
+2. Make sure the `data/` folder is **writable** (e.g. `chown -R www-data:www-data data/` and `chmod -R 775 data/`).
+3. (Optional) Make `logs/` writable as well for server logs (e.g. `ingest.log`).
+4. **Leaflet** loads from CDN (no other external deps).
+5. **Access**:
    - Login: `https://myserverurl/penguin_geomap_server/login.php`  
-   - Karte: `https://myserverurl/penguin_geomap_server/index.php`
+   - Map: `https://myserverurl/penguin_geomap_server/index.php`
 
 ---
 
-## Erstkonfiguration
+## Initial configuration
 
 ### In Home Assistant
 
-Beim Hinzufügen der Integration erscheint ein Formular:
+When adding the integration, you’ll see a form:
 
-- **Name**: frei (z. B. `myiphone`)  
-- **Entity**: z. B. `device_tracker.myiphone`  
-- **Server-URL**: `https://myserverurl/penguin_geomap_server`  
-  > **Wichtig:** **ohne** `/api/ingest.php` – die Integration hängt das selbst an!
+- **Name**: free text (e.g. `myiphone`)  
+- **Entity**: e.g. `device_tracker.myiphone`  
+- **Server URL**: `https://myserverurl/penguin_geomap_server`  
+  > **Important:** **Do not** include `/api/ingest.php` — the integration appends it automatically.
 - **Key**: `MYPASS-KEY`  
-  Erlaubt: `A–Z a–z 0–9 _ -` (4–64 Zeichen)
-- **Verify SSL**: aktivieren, wenn dein Zertifikat gültig ist; bei Self-Signed deaktivieren.
-- **Poll seconds**: z. B. `30` (0 = Polling aus)
+  Allowed: `A–Z a–z 0–9 _ -` (4–64 chars)
+- **Verify SSL**: enable if your certificate is valid; disable for self‑signed during tests.
+- **Poll seconds**: e.g. `30` (set `0` to disable polling)
 
-Nach dem Speichern sendet die Integration, **sofern bereits Koordinaten vorhanden sind**, einmalig direkt einen Punkt.
+After saving, if the entity already has coordinates, the integration will **send one initial point** immediately.
 
-### Auf dem Server einloggen
+### Log in on the server
 
-- Öffne `https://myserverurl/penguin_geomap_server/login.php`  
-- Gib **denselben Key** ein, den du in Home Assistant verwendet hast (hier: `MYPASS-KEY`).  
-- Standardmäßig wird **heute** angezeigt; über den Datepicker andere Tage.  
-- Der Button **„Verbinden“** zeichnet eine gestrichelte Linie zwischen den Wegpunkten des Tages.  
-- Über **Logout** trennst du die Session.
+- Open `https://myserverurl/penguin_geomap_server/login.php`  
+- Enter **the same key** you configured in Home Assistant (here: `MYPASS-KEY`).  
+- By default **today** is shown; pick other dates via the date picker.  
+- The **“Connect”** button draws a dashed line between the day’s waypoints.  
+- Use **Logout** to end the session.
 
 ---
 
 ## Services (Home Assistant)
 
-Alle Dienste findest du unter **Entwicklerwerkzeuge → Dienste**.
+You’ll find all services under **Developer Tools → Services**.
 
 ### `penguin_geomap.send_now`
 
-Liest die aktuellen Koordinaten des angegebenen `device_tracker` und sendet sie sofort.
+Reads the current coordinates from the given `device_tracker` and sends them immediately.
 
 ```yaml
 service: penguin_geomap.send_now
@@ -110,19 +112,19 @@ data:
   entity_id: device_tracker.myiphone
 ```
 
-> Wenn du kein `entity_id` angibst, wird – falls vorhanden – das **erste** konfigurierte Gerät verwendet.
+> If you omit `entity_id`, the **first configured device** will be used (if present).
 
 ---
 
 ### `penguin_geomap.test_post`
 
-Sendet einen **Testpunkt** (default München) an den Server – unabhängig vom tatsächlichen Tracker-Zustand.  
-Perfekt für die **Strecken-Diagnose**.
+Sends a **test point** (Munich by default) to the server—independent of the tracker’s real state.  
+Great for **end‑to‑end diagnostics**.
 
 ```yaml
 service: penguin_geomap.test_post
 data:
-  device_index: 0    # optional (0 = erstes Gerät)
+  device_index: 0    # optional (0 = first device)
   # lat: 48.137154   # optional
   # lon: 11.576124   # optional
 ```
@@ -131,39 +133,39 @@ data:
 
 ### `penguin_geomap.update_device`
 
-Erlaubt das **nachträgliche Editieren** eines existierenden Eintrags, falls du (z. B. in deiner HA-Version) keinen „Konfigurieren“-Dialog bekommst.
+Allows **editing an existing entry** by index, useful if your HA version does not show the “Configure” options dialog.
 
 ```yaml
 service: penguin_geomap.update_device
 data:
-  index: 0                           # 0 = erstes Gerät
+  index: 0                           # 0 = first device
   name: myiphone                     # optional
   entity_id: device_tracker.myiphone # optional
   server_url: https://myserverurl/penguin_geomap_server  # optional
   key: MYPASS-KEY                    # optional
   verify_ssl: true                   # optional
   enabled: true                      # optional
-  poll_seconds: 30                   # optional (0 = aus)
+  poll_seconds: 30                   # optional (0 = off)
 ```
 
-> Die Integration speichert in den Options und **lädt automatisch neu** – die Änderung ist direkt aktiv.
+> The integration writes to options and **auto‑reloads** — changes take effect immediately.
 
 ---
 
-## Beispiele
+## Examples
 
-### 1) Testpunkt per Curl senden (heutiger Timestamp)
+### 1) Send a test point via curl (today’s UNIX timestamp)
 
 ```bash
 curl -X POST "https://myserverurl/penguin_geomap_server/api/ingest.php"   -H "Content-Type: application/json"   -d '{"key":"MYPASS-KEY","lat":48.137154,"lon":11.576124,"ts":'$(date +%s)'}'
 ```
 
-Erwartete Antwort: `{"ok":true}`  
-Prüfen: `https://myserverurl/penguin_geomap_server/api/debug.php?key=MYPASS-KEY&limit=5`
+Expected response: `{"ok":true}`  
+Check: `https://myserverurl/penguin_geomap_server/api/debug.php?key=MYPASS-KEY&limit=5`
 
 ---
 
-### 2) „Sende jetzt sofort“ (aktueller Standort)
+### 2) “Send now” (current location)
 
 ```yaml
 service: penguin_geomap.send_now
@@ -173,7 +175,7 @@ data:
 
 ---
 
-### 3) Testpunkt (Diagnose)
+### 3) Test point (diagnostics)
 
 ```yaml
 service: penguin_geomap.test_post
@@ -183,7 +185,7 @@ data:
 
 ---
 
-### 4) Gerät nachträglich ändern (Server/Key/Sensor)
+### 4) Edit device (server/key/sensor)
 
 ```yaml
 service: penguin_geomap.update_device
@@ -198,46 +200,46 @@ data:
 
 ---
 
-## Sicherheit & Datenschutz
+## Security & privacy
 
-- Zugriff auf die Kartendaten erfolgt **nur nach Login** mit dem **Key** des Geräts (`MYPASS-KEY`).  
-- **HTTPS** dringend empfohlen. Bei Self-Signed-Zertifikat kannst du in der Integration `Verify SSL` deaktivieren.
-- Auf dem Server werden pro Punkt gespeichert:
-  - `device_key` (dein Key),
-  - `ts` (UNIX-Timestamp),
+- Access to map data is **key‑protected** (server login with the device’s key, e.g. `MYPASS-KEY`).  
+- **HTTPS** strongly recommended. For self‑signed certs during testing, disable `Verify SSL` in the integration.
+- The server stores per point only:
+  - `device_key` (your key),
+  - `ts` (UNIX timestamp),
   - `lat`, `lon`.
 
 ---
 
 ## Troubleshooting
 
-1. **Keine Punkte sichtbar**
-   - In Home Assistant den Dienst `penguin_geomap.test_post` aufrufen.  
-     - Kommen Punkte in `debug.php` an?  
-       - **Ja** → HA ↔ Server-Verbindung ok.  
-       - **Nein** → URL prüfen, Zertifikat (Verify SSL), Firewall/Port 443.
-   - **Datum** prüfen: Die Karte filtert auf den gewählten Tag. Wähle `heute` oder nutze `date=latest` (Standard beim Laden).
+1. **No points visible**
+   - In Home Assistant, call `penguin_geomap.test_post`.  
+     - Do points show up in `debug.php`?  
+       - **Yes** → HA ↔ server connectivity is fine.  
+       - **No** → Check URL, certificate (Verify SSL), and firewall/port 443.
+   - **Date filter**: The map filters by the selected day. Choose **today** or use `date=latest` (default on first load).
 
-2. **Debug/Server prüfen**
+2. **Check server**
    - `https://myserverurl/penguin_geomap_server/api/debug.php?key=MYPASS-KEY&limit=5`
-   - Logdatei: `server/penguin_geomap_server/logs/ingest.log`
+   - Log file: `server/penguin_geomap_server/logs/ingest.log`
 
-3. **„POST … failed (404)“**
-   - **Falsche URL**: In den Optionen **kein** `/api/ingest.php` angeben.  
-     Richtig ist die **Basis-URL**: `https://myserverurl/penguin_geomap_server`
+3. **“POST … failed (404)”**
+   - **Wrong URL**: Do **not** include `/api/ingest.php` in options.  
+     Correct **base URL**: `https://myserverurl/penguin_geomap_server`
 
-4. **SSL-Fehler**
-   - Selbstsigniertes Zertifikat? In den Optionen `Verify SSL: false`.
+4. **SSL errors**
+   - Self‑signed cert? Disable `Verify SSL` in options during testing.
 
-5. **Event-Listener triggert nicht**
-   - Integration hat zusätzlich **Polling** (Default 30 s).  
-   - Du kannst `poll_seconds` per Options-Flow/Service anpassen (z. B. 15 s).
+5. **Event listener doesn’t fire**
+   - The integration also has **polling** (default 30 s).  
+   - Adjust `poll_seconds` via options/service (e.g. 15 s).
 
-6. **Konfiguration nachträglich ändern**
-   - Entweder über **Konfigurieren** (Options-Flow)  
-   - oder per Service `penguin_geomap.update_device` (siehe oben).
+6. **Edit configuration later**
+   - Either via **Configure** (options flow)  
+   - or with the service `penguin_geomap.update_device` (see above).
 
-7. **HA-Logs aktivieren**
+7. **Enable HA logs**
    ```yaml
    logger:
      default: info
@@ -249,18 +251,18 @@ data:
 
 ## FAQ
 
-**Welche Entities werden unterstützt?**  
-Alle `device_tracker.*`, die `latitude` & `longitude` als Attribute liefern (z. B. `device_tracker.myiphone`).
+**Which entities are supported?**  
+Any `device_tracker.*` exposing `latitude` & `longitude` (e.g. `device_tracker.myiphone`).
 
-**Kann ich mehrere Geräte nutzen?**  
-Ja – einfach in der Integration weitere Geräte hinzufügen (jeder mit eigenem Key & Server-URL, oder gemeinsam).
+**Can I track multiple devices?**  
+Yes — add more devices in the integration (each with its own key & server URL, or even the same server if you prefer).
 
-**Darf die Server-URL `/api/ingest.php` enthalten?**  
-**Nein.** Gib **nur** die Basis-URL an (z. B. `https://myserverurl/penguin_geomap_server`). Die Integration hängt `/api/ingest.php` automatisch an.
+**May the server URL contain `/api/ingest.php`?**  
+**No.** Provide only the **base URL** (e.g. `https://myserverurl/penguin_geomap_server`). The integration appends `/api/ingest.php` automatically.
 
-**Was macht „Verbinden“?**  
-Verbindet die Punkte des ausgewählten Tages **in zeitlicher Reihenfolge** mit einer gestrichelten Linie.
+**What does “Connect” do?**  
+It connects the day’s points **in chronological order** with a dashed polyline.
 
 ---
 
-Viel Spaß mit **PenguinGEOMap** 🐧
+Enjoy **PenguinGEOMap** 🐧

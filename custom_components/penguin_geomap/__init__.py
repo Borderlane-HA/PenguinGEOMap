@@ -9,7 +9,7 @@ from homeassistant.helpers.event import async_track_state_change_event
 from homeassistant.const import EVENT_HOMEASSISTANT_START
 
 from .const import (
-    DOMAIN, CONF_DEVICES, CONF_NAME, CONF_ENTITY_ID, CONF_KEY, CONF_SERVER_URL, CONF_ENABLED,
+    DOMAIN, CONF_DEVICES, CONF_NAME, CONF_ENTITY_ID, CONF_KEY, CONF_SERVER_URL, CONF_ENABLED, CONF_VERIFY_SSL,
 )
 
 import aiohttp, asyncio, time
@@ -23,7 +23,7 @@ class DeviceWatcher:
         self.entity_id = device.get(CONF_ENTITY_ID)
         self.key = device.get(CONF_KEY)
         self.server_url = device.get(CONF_SERVER_URL)
-        self.enabled = device.get(CONF_ENABLED, True)
+        self.enabled = device.get(CONF_ENABLED, CONF_VERIFY_SSL, True)
         self._unsub = None
         self._last_sent = None
 
@@ -59,6 +59,7 @@ class DeviceWatcher:
 
     @callback
     def _state_changed(self, event):
+        _LOGGER.debug("PenguinGEOMap: State changed for %s", self.entity_id)
         new_state = event.data.get("new_state")
         if new_state is None:
             return
@@ -76,7 +77,7 @@ class DeviceWatcher:
         payload = {"key": self.key, "lat": lat, "lon": lon, "ts": ts, "name": self.name, "entity_id": self.entity_id}
         try:
             session: aiohttp.ClientSession = self.hass.helpers.aiohttp_client.async_get_clientsession()
-            async with session.post(url, json=payload, timeout=10) as resp:
+            async with session.post(url, json=payload, timeout=10, ssl=self.verify_ssl) as resp:
                 if resp.status != 200:
                     _LOGGER.warning("PenguinGEOMap: POST %s failed (%s): %s", url, resp.status, await resp.text())
                 else:
@@ -90,6 +91,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     hass.data.setdefault(DOMAIN, {})
     devices = entry.options.get(CONF_DEVICES, entry.data.get(CONF_DEVICES, []))
     watchers: List[DeviceWatcher] = []
+    _LOGGER.info("PenguinGEOMap: Configured devices: %s", devices)
     for dev in devices:
         w = DeviceWatcher(hass, dev)
         watchers.append(w)
@@ -114,6 +116,30 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
 
     hass.data[DOMAIN][entry.entry_id] = {"watchers": watchers}
     _LOGGER.info("PenguinGEOMap: setup complete with %d device(s)", len(watchers))
+
+# Register diagnostic test service
+async def async_handle_test_post(call):
+    # pick first device by default
+    device_index = call.data.get("device_index")
+    lat = call.data.get("lat")
+    lon = call.data.get("lon")
+    target = None
+    if device_index is not None:
+        try:
+            target = watchers[int(device_index)]
+        except Exception:
+            target = None
+    if target is None and watchers:
+        target = watchers[0]
+    if not target:
+        _LOGGER.warning("PenguinGEOMap: test_post – no devices configured"); return
+    # default test coords: Munich
+    if lat is None: lat = 48.137154
+    if lon is None: lon = 11.576124
+    ts = int(time.time())
+    _LOGGER.info("PenguinGEOMap: test_post to %s -> (%.6f, %.6f) ts=%s", target.server_url, lat, lon, ts)
+    await target._async_post(lat, lon, ts)
+hass.services.async_register(DOMAIN, "test_post", async_handle_test_post)
     return True
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):

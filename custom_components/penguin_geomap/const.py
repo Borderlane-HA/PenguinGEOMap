@@ -7,6 +7,7 @@ CONF_ENTITY_ID = "entity_id"
 CONF_KEY = "key"
 CONF_SERVER_URL = "server_url"
 CONF_ENABLED = "enabled"
+CONF_VERIFY_SSL = "verify_ssl"
 
 KEY_REGEX = r"^[A-Za-z0-9_\-]{4,64}$"
 

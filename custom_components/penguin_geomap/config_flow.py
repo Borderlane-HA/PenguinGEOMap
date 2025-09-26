@@ -6,19 +6,20 @@ from typing import Any, Dict, List, Optional
 from homeassistant import config_entries
 from homeassistant.helpers.selector import EntitySelector, EntitySelectorConfig, TextSelector, TextSelectorConfig
 from homeassistant.data_entry_flow import FlowResult
-from .const import DOMAIN, CONF_DEVICES, CONF_NAME, CONF_ENTITY_ID, CONF_KEY, CONF_SERVER_URL, CONF_ENABLED, KEY_REGEX
+from .const import DOMAIN, CONF_DEVICES, CONF_NAME, CONF_ENTITY_ID, CONF_KEY, CONF_SERVER_URL, CONF_ENABLED, KEY_REGEX, CONF_VERIFY_SSL
 
 KEY_RE = re.compile(KEY_REGEX)
 
 def device_schema(existing: Optional[Dict[str, Any]] = None) -> vol.Schema:
     existing = existing or {}
     return vol.Schema({
-        vol.Required(CONF_NAME, default=existing.get(CONF_NAME, "Banana iPhone")): TextSelector(TextSelectorConfig(type="text")),
+            vol.Required(CONF_NAME, default=existing.get(CONF_NAME, "Banana iPhone")): TextSelector(TextSelectorConfig(type="text")),
         vol.Required(CONF_ENTITY_ID, default=existing.get(CONF_ENTITY_ID, "")): EntitySelector(EntitySelectorConfig(domain=["device_tracker"])),
         vol.Required(CONF_SERVER_URL, default=existing.get(CONF_SERVER_URL, "https://meinedomain.de/penguin_geomap_server")): TextSelector(TextSelectorConfig(type="text")),
         vol.Required(CONF_KEY, default=existing.get(CONF_KEY, "BANANA-1234")): TextSelector(TextSelectorConfig(type="password")),
-        vol.Required(CONF_ENABLED, default=existing.get(CONF_ENABLED, True)): bool,
-    })
+        vol.Required(CONF_ENABLED, default=existing.get(CONF_ENABLED, True)): bool,,
+            vol.Required(CONF_VERIFY_SSL, default=existing.get(CONF_VERIFY_SSL, True)): bool
+        })
 
 def validate_inputs(user_input: Dict[str, Any]) -> Dict[str, str]:
     errors: Dict[str, str] = {}

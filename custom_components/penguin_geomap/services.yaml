@@ -11,3 +11,24 @@ send_now:
       selector:
         entity:
           domain: device_tracker
+
+
+test_post:
+  name: Send test point (diagnostic)
+  description: Sends a test coordinate to the server using the configured device (default index 0) to verify connectivity.
+  fields:
+    device_index:
+      name: Device index
+      description: Optional zero-based device index as listed in the integration options.
+      required: false
+      example: 0
+    lat:
+      name: Latitude
+      description: Optional latitude override (defaults to 48.137154).
+      required: false
+      example: 48.137154
+    lon:
+      name: Longitude
+      description: Optional longitude override (defaults to 11.576124).
+      required: false
+      example: 11.576124

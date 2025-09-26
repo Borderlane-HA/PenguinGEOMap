@@ -31,3 +31,37 @@ test_post:
       description: Optional longitude override (defaults to 11.576124).
       required: false
       example: 11.576124
+
+update_device:
+  name: Update configured device
+  description: Update a device in the PenguinGEOMap options by its index (as shown in the options list).
+  fields:
+    index:
+      name: Device index
+      description: Zero-based device index (0 for the first device).
+      required: true
+      example: 0
+    name:
+      name: Name
+      required: false
+    entity_id:
+      name: Entity ID
+      required: false
+    server_url:
+      name: Server URL
+      description: Base server URL (without /api/ingest.php).
+      required: false
+      example: https://garmin.penguinparade.eu/penguin_geomap_server
+    key:
+      name: Key
+      required: false
+    enabled:
+      name: Enabled
+      required: false
+    verify_ssl:
+      name: Verify SSL
+      required: false
+    poll_seconds:
+      name: Poll seconds
+      description: Poll interval per device (0 to disable).
+      required: false

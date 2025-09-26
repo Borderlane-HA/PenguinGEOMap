@@ -5,11 +5,13 @@ import logging
 import time
 import asyncio
 from typing import Any, Dict, List, Optional
+from datetime import timedelta
+import math
 
 import aiohttp
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.event import async_track_state_change_event
+from homeassistant.helpers.event import async_track_state_change_event, async_track_time_interval
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .const import (
@@ -21,9 +23,35 @@ from .const import (
     CONF_SERVER_URL,
     CONF_ENABLED,
     CONF_VERIFY_SSL,
+    CONF_POLL_SECONDS,
+    KEY_REGEX,
 )
 
 _LOGGER = logging.getLogger(__name__)
+
+import re
+KEY_RE = re.compile(KEY_REGEX)
+
+def _validate_device_input(data: Dict[str, Any]) -> Optional[str]:
+    server = str(data.get("server_url", "")).strip()
+    if not (server.startswith("http://") or server.startswith("https://")):
+        return "server_url must start with http:// or https://"
+    if "/api/ingest.php" in server:
+        return "server_url must NOT include /api/ingest.php"
+    key = str(data.get("key", "")).strip()
+    if not KEY_RE.match(key):
+        return "key must be 4–64 chars (A–Z a–z 0–9 _ -)"
+    ent = str(data.get("entity_id", "")).strip()
+    if not ent:
+        return "entity_id required"
+    return None
+
+def _haversine_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    R = 6371000.0
+    phi1 = math.radians(lat1); phi2 = math.radians(lat2)
+    dphi = math.radians(lat2 - lat1); dl = math.radians(lon2 - lon1)
+    a = math.sin(dphi/2)**2 + math.cos(phi1)*math.cos(phi2)*math.sin(dl/2)**2
+    return 2*R*math.asin(math.sqrt(a))
 
 
 class DeviceWatcher:
@@ -35,7 +63,9 @@ class DeviceWatcher:
         self.server_url = device.get(CONF_SERVER_URL)
         self.enabled = bool(device.get(CONF_ENABLED, True))
         self.verify_ssl = bool(device.get(CONF_VERIFY_SSL, True))
+        self.poll_seconds = int(device.get(CONF_POLL_SECONDS, 30))
         self._unsub = None
+        self._unsub_poll = None
         self._last_sent: Optional[tuple[float, float]] = None
 
     async def async_start(self) -> None:
@@ -56,19 +86,27 @@ class DeviceWatcher:
             self._state_changed,
         )
         _LOGGER.info(
-            "PenguinGEOMap: Started watcher for %s (%s) with verify_ssl=%s",
+            "PenguinGEOMap: Started watcher for %s (%s) with verify_ssl=%s poll=%ss",
             self.name,
             self.entity_id,
             self.verify_ssl,
+            self.poll_seconds,
         )
 
         await self._send_current_if_available()
+
+        if self.poll_seconds > 0:
+            self._unsub_poll = async_track_time_interval(self.hass, self._poll_now, timedelta(seconds=self.poll_seconds))
+            _LOGGER.info("PenguinGEOMap: Polling every %ss for %s", self.poll_seconds, self.entity_id)
 
     async def async_stop(self) -> None:
         if self._unsub:
             self._unsub()
             self._unsub = None
             _LOGGER.info("PenguinGEOMap: Stopped watcher for %s", self.name)
+        if self._unsub_poll:
+            self._unsub_poll()
+            self._unsub_poll = None
 
     async def _send_current_if_available(self) -> None:
         st = self.hass.states.get(self.entity_id)
@@ -102,6 +140,26 @@ class DeviceWatcher:
             return
         self._last_sent = coords
         self.hass.async_create_task(self._async_post(coords[0], coords[1], ts))
+
+    async def _poll_now(self, now) -> None:
+        st = self.hass.states.get(self.entity_id)
+        if not st:
+            return
+        attrs = st.attributes or {}
+        lat = attrs.get("latitude"); lon = attrs.get("longitude")
+        if lat is None or lon is None:
+            return
+        lat = float(lat); lon = float(lon)
+        if self._last_sent is None:
+            await self._async_post(lat, lon, int(time.time()))
+            self._last_sent = (lat, lon)
+            _LOGGER.debug("PenguinGEOMap: poll -> first send for %s", self.entity_id)
+            return
+        dist = _haversine_m(self._last_sent[0], self._last_sent[1], lat, lon)
+        if dist >= 1.0:
+            await self._async_post(lat, lon, int(time.time()))
+            self._last_sent = (lat, lon)
+            _LOGGER.debug("PenguinGEOMap: poll -> moved %.2fm, sent for %s", dist, self.entity_id)
 
     async def _async_post(self, lat: float, lon: float, ts: int) -> None:
         url = self.server_url.rstrip("/") + "/api/ingest.php"
@@ -184,22 +242,59 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         if not target:
             _LOGGER.warning("PenguinGEOMap: test_post – no devices configured")
             return
-        if lat is None:
-            lat = 48.137154
-        if lon is None:
-            lon = 11.576124
+        if lat is None: lat = 48.137154
+        if lon is None: lon = 11.576124
         ts = int(time.time())
         _LOGGER.info(
             "PenguinGEOMap: test_post to %s -> (%.6f, %.6f) ts=%s",
-            target.server_url,
-            float(lat),
-            float(lon),
-            ts,
+            target.server_url, float(lat), float(lon), ts,
         )
         await target._async_post(float(lat), float(lon), ts)
 
+    async def async_handle_update_device(call):
+        """Update a configured device (by index) in options and reload entry."""
+        idx = call.data.get("index")
+        if idx is None:
+            _LOGGER.warning("PenguinGEOMap: update_device – missing 'index'"); return
+        try:
+            idx = int(idx)
+        except Exception:
+            _LOGGER.warning("PenguinGEOMap: update_device – invalid index"); return
+
+        devices = entry.options.get(CONF_DEVICES, entry.data.get(CONF_DEVICES, []))
+        if not (0 <= idx < len(devices)):
+            _LOGGER.warning("PenguinGEOMap: update_device – index out of range"); return
+
+        new_dev = dict(devices[idx])
+        mapping = {
+            "name": CONF_NAME,
+            "entity_id": CONF_ENTITY_ID,
+            "server_url": CONF_SERVER_URL,
+            "key": CONF_KEY,
+            "enabled": CONF_ENABLED,
+            "verify_ssl": CONF_VERIFY_SSL,
+            "poll_seconds": CONF_POLL_SECONDS,
+        }
+        for k_in, k_store in mapping.items():
+            if k_in in call.data:
+                new_dev[k_store] = call.data.get(k_in)
+
+        err = _validate_device_input({
+            "server_url": new_dev.get(CONF_SERVER_URL),
+            "key": new_dev.get(CONF_KEY),
+            "entity_id": new_dev.get(CONF_ENTITY_ID),
+        })
+        if err:
+            _LOGGER.warning("PenguinGEOMap: update_device – %s", err)
+            return
+
+        devices[idx] = new_dev
+        hass.config_entries.async_update_entry(entry, options={CONF_DEVICES: devices})
+        _LOGGER.info("PenguinGEOMap: device %s updated; reloading entry", idx)
+
     hass.services.async_register(DOMAIN, "send_now", async_handle_send_now)
     hass.services.async_register(DOMAIN, "test_post", async_handle_test_post)
+    hass.services.async_register(DOMAIN, "update_device", async_handle_update_device)
 
     hass.data[DOMAIN][entry.entry_id] = {"watchers": watchers}
     _LOGGER.info("PenguinGEOMap: setup complete with %d device(s)", len(watchers))

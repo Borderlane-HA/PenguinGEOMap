@@ -14,7 +14,7 @@ from homeassistant.helpers.selector import (
 
 from .const import (
     DOMAIN, CONF_DEVICES, CONF_NAME, CONF_ENTITY_ID, CONF_KEY, CONF_SERVER_URL,
-    CONF_ENABLED, KEY_REGEX, CONF_VERIFY_SSL
+    CONF_ENABLED, KEY_REGEX, CONF_VERIFY_SSL, CONF_POLL_SECONDS
 )
 
 KEY_RE = re.compile(KEY_REGEX)
@@ -28,6 +28,7 @@ def device_schema(existing: Optional[Dict[str, Any]] = None) -> vol.Schema:
         vol.Required(CONF_KEY, default=existing.get(CONF_KEY, "BANANA-1234")): TextSelector(TextSelectorConfig(type="password")),
         vol.Required(CONF_ENABLED, default=existing.get(CONF_ENABLED, True)): bool,
         vol.Required(CONF_VERIFY_SSL, default=existing.get(CONF_VERIFY_SSL, True)): bool,
+        vol.Optional(CONF_POLL_SECONDS, default=existing.get(CONF_POLL_SECONDS, 30)): int,
     })
 
 def validate_inputs(user_input: Dict[str, Any]) -> Dict[str, str]:

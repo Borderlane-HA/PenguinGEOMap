@@ -8,4 +8,6 @@ CONF_KEY = "key"
 CONF_SERVER_URL = "server_url"
 CONF_ENABLED = "enabled"
 
+KEY_REGEX = r"^[A-Za-z0-9_\-]{4,64}$"
+
 PLATFORMS = []

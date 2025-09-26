@@ -1,33 +1,63 @@
 
 from __future__ import annotations
+import re
 import voluptuous as vol
 from typing import Any, Dict, List, Optional
 from homeassistant import config_entries
 from homeassistant.helpers.selector import EntitySelector, EntitySelectorConfig, TextSelector, TextSelectorConfig
 from homeassistant.data_entry_flow import FlowResult
-from .const import DOMAIN, CONF_DEVICES, CONF_NAME, CONF_ENTITY_ID, CONF_KEY, CONF_SERVER_URL, CONF_ENABLED
+from .const import DOMAIN, CONF_DEVICES, CONF_NAME, CONF_ENTITY_ID, CONF_KEY, CONF_SERVER_URL, CONF_ENABLED, KEY_REGEX
+
+KEY_RE = re.compile(KEY_REGEX)
 
 def device_schema(existing: Optional[Dict[str, Any]] = None) -> vol.Schema:
     existing = existing or {}
     return vol.Schema({
-        vol.Required(CONF_NAME, default=existing.get(CONF_NAME, "")): TextSelector(TextSelectorConfig(type="text")),
+        vol.Required(CONF_NAME, default=existing.get(CONF_NAME, "Banana iPhone")): TextSelector(TextSelectorConfig(type="text")),
         vol.Required(CONF_ENTITY_ID, default=existing.get(CONF_ENTITY_ID, "")): EntitySelector(EntitySelectorConfig(domain=["device_tracker"])),
-        vol.Required(CONF_SERVER_URL, default=existing.get(CONF_SERVER_URL, "")): TextSelector(TextSelectorConfig(type="text")),
-        vol.Required(CONF_KEY, default=existing.get(CONF_KEY, "")): TextSelector(TextSelectorConfig(type="password")),
+        vol.Required(CONF_SERVER_URL, default=existing.get(CONF_SERVER_URL, "https://meinedomain.de/penguin_geomap_server")): TextSelector(TextSelectorConfig(type="text")),
+        vol.Required(CONF_KEY, default=existing.get(CONF_KEY, "BANANA-1234")): TextSelector(TextSelectorConfig(type="password")),
         vol.Required(CONF_ENABLED, default=existing.get(CONF_ENABLED, True)): bool,
     })
+
+def validate_inputs(user_input: Dict[str, Any]) -> Dict[str, str]:
+    errors: Dict[str, str] = {}
+    # Server URL must start with http(s) and must NOT end with /api/ingest.php
+    server = (user_input.get(CONF_SERVER_URL) or "").strip()
+    if not (server.startswith("http://") or server.startswith("https://")):
+        errors[CONF_SERVER_URL] = "must_start_http"
+    if "/api/ingest.php" in server:
+        errors[CONF_SERVER_URL] = "do_not_include_ingest"
+    # Key must match regex
+    key = (user_input.get(CONF_KEY) or "").strip()
+    if not KEY_RE.match(key):
+        errors[CONF_KEY] = "invalid_key"
+    # Entity id must be selected
+    ent = (user_input.get(CONF_ENTITY_ID) or "").strip()
+    if not ent:
+        errors[CONF_ENTITY_ID] = "required"
+    return errors
 
 class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     VERSION = 1
 
     async def async_step_user(self, user_input: dict | None = None) -> FlowResult:
-        # Collect the FIRST device immediately (no empty OK dialog)
         if user_input is not None:
+            errors = validate_inputs(user_input)
+            if errors:
+                return self.async_show_form(step_id="user", data_schema=device_schema(user_input), errors=errors, description_placeholders={
+                    "help": "Server: Basis-URL ohne /api/ingest.php. Key: 4–64 Zeichen A–Z a–z 0–9 _ -."
+                })
             devices = [user_input]
             return self.async_create_entry(title="PenguinGEOMap", data={CONF_DEVICES: devices}, options={CONF_DEVICES: devices})
-        return self.async_show_form(step_id="user", data_schema=device_schema(), description_placeholders={
-            "example": "Select your device_tracker.XX (e.g., device_tracker.bananastefan). Server: https://your-server.tld/penguin_geomap_server"
-        })
+        # initial form with examples
+        return self.async_show_form(
+            step_id="user",
+            data_schema=device_schema(),
+            description_placeholders={
+                "help": "Server: Basis-URL ohne /api/ingest.php (z. B. https://meinedomain.de/penguin_geomap_server). Key: 4–64 Zeichen A–Z a–z 0–9 _ -. Sensor: device_tracker.*"
+            },
+        )
 
 class OptionsFlowHandler(config_entries.OptionsFlow):
     def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
@@ -43,6 +73,9 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
 
     async def async_step_add(self, user_input: dict | None = None) -> FlowResult:
         if user_input is not None:
+            errors = validate_inputs(user_input)
+            if errors:
+                return self.async_show_form(step_id="add", data_schema=device_schema(user_input), errors=errors)
             self.devices.append(user_input); return await self.async_step_init()
         return self.async_show_form(step_id="add", data_schema=device_schema())
 
@@ -57,6 +90,9 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         if self._edit_index is None: return await self.async_step_init()
         existing = self.devices[self._edit_index]
         if user_input is not None:
+            errors = validate_inputs(user_input)
+            if errors:
+                return self.async_show_form(step_id="edit_form", data_schema=device_schema(user_input), errors=errors)
             self.devices[self._edit_index] = user_input; self._edit_index = None; return await self.async_step_init()
         return self.async_show_form(step_id="edit_form", data_schema=device_schema(existing))
 

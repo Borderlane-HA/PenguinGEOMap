@@ -131,3 +131,9 @@ async def async_update_entry(hass: HomeAssistant, entry: ConfigEntry):
     # Restart watchers on options update
     await async_unload_entry(hass, entry)
     await async_setup_entry(hass, entry)
+# __init__.py (Ergänzung)
+
+from .config_flow import PenguinGeoMapOptionsFlow
+
+async def async_get_options_flow(config_entry):
+    return PenguinGeoMapOptionsFlow(config_entry)

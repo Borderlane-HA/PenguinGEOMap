@@ -4,5 +4,7 @@
   "zip_release": false,
   "filename": "",
   "render_readme": true,
-  "domains": ["penguin_geomap"]
+  "domains": [
+    "penguin_geomap"
+  ]
 }
